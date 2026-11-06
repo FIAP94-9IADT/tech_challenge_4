@@ -1,0 +1,105 @@
+# Configuração central do MedMonitor — todos os limiares clínicos e técnicos ficam aqui.
+
+paths:
+  data_dir: data
+  output_dir: outputs
+  alerts_log: outputs/alerts.jsonl
+
+alerts:
+  cooldown_minutes: 30          # suprime alertas repetidos (mesmo paciente/modalidade/título)
+  console: true
+  min_severity_webhook: WARNING # INFO | WARNING | CRITICAL
+
+vitals:
+  sampling_minutes: 1
+  baseline_hours: 4             # janela inicial usada como linha de base do paciente
+  rolling_window: 60            # amostras na janela do z-score robusto
+  zscore_threshold: 4.0
+  min_persistence: 3            # amostras consecutivas para confirmar um evento (filtra artefatos)
+  merge_gap: 30                 # amostras de tolerância para unir eventos próximos
+  iforest_contamination: 0.02
+  hard_limits:                  # limites absolutos (alerta crítico imediato se persistente)
+    hr:   [40, 130]
+    sbp:  [90, 200]
+    spo2: [90, 100]
+    rr:   [8, 25]
+    temp: [35.0, 39.0]
+
+prescriptions:
+  dose_change_ratio: 2.0        # aumento >= 2x (ou redução <= 1/2) é considerado abrupto
+  max_changes_24h: 3
+  night_hours: [0, 6]
+  high_alert_drugs: [morfina, fentanil, insulina, heparina, enoxaparina, cloreto de potassio, amiodarona, midazolam]
+  max_daily_dose:               # doses máximas diárias de referência na unidade prescrita (simplificadas, uso didático)
+    morfina: 60
+    fentanil: 2
+    insulina: 100
+    heparina: 40000
+    enoxaparina: 200
+    cloreto de potassio: 6000
+    amiodarona: 1200
+    vancomicina: 4000
+    dipirona: 4000
+    paracetamol: 4000
+    midazolam: 50
+  therapeutic_classes:
+    anticoagulante: [heparina, enoxaparina, varfarina, rivaroxabana]
+    opioide: [morfina, fentanil, tramadol, oxicodona]
+    benzodiazepinico: [midazolam, diazepam, lorazepam]
+  interactions:                 # pares que geram alerta quando ativos simultaneamente
+    - [morfina, midazolam]
+    - [heparina, enoxaparina]
+    - [amiodarona, varfarina]
+
+movement:
+  inactivity_threshold: 5       # contagens/min abaixo disso = imóvel
+  max_immobile_minutes: 150     # sem reposicionamento (risco de lesão por pressão)
+  night_hours: [22, 6]
+  agitation_zscore: 3.0
+  agitation_min_minutes: 30
+  fall_spike_zscore: 8.0
+  fall_stillness_minutes: 10
+
+audio:
+  language: pt-BR
+  sample_rate: 16000
+  # referências aproximadas de fala adulta saudável (usadas para normalizar os escores)
+  reference:
+    speech_rate_syl_s: [3.0, 5.5]
+    f0_std_semitones_min: 1.5
+    jitter_max: 0.02
+    shimmer_max: 0.10
+  critical_terms:
+    respiratorio: [falta de ar, sem ar, dificuldade para respirar, chiado, sufoco, cansaço para respirar, dispneia]
+    cardiaco: [dor no peito, aperto no peito, palpitação, coração acelerado, coração disparado]
+    neurologico: [tontura, desmaio, desmaiei, formigamento, fala enrolada, fala está enrolada, boca torta, visão turva, confusão, dormência]
+    geral: [cansaço, cansada, cansado, fraqueza, febre, calafrio, sem energia, exausto, exausta]
+    dor: [dor forte, muita dor, dor insuportável, dor intensa]
+
+video:
+  pose_backend: yolo             # yolo | openpose
+  pose_model: models/yolov8n-pose.pt
+  detect_model: models/yolov8n.pt  # troque por pesos treinados em instrumentos cirúrgicos, se disponível
+  openpose_proto: models/openpose/pose_deploy_linevec.prototxt
+  openpose_weights: models/openpose/pose_iter_440000.caffemodel
+  frame_stride: 2                # processa 1 a cada N frames (CPU)
+  conf_threshold: 0.35
+  fall_velocity: 1.2             # alturas de corpo por segundo (queda do quadril)
+  trunk_lean_max_deg: 30
+  asymmetry_max_deg: 30
+  min_event_seconds: 0.5
+  instrument_classes: [scissors, knife]
+  prohibited_in_zone: [cell phone, cup, bottle]
+  critical_zones:                # polígonos normalizados (0-1) + lotação máxima — ex.: campo estéril, área restrita
+    area_restrita:
+      polygon: [[0.30, 0.45], [0.70, 0.45], [0.70, 0.95], [0.30, 0.95]]
+      max_people: 2
+  exercise_profiles:              # ângulo articular: 180° = estendido
+    agachamento:     {joint: knee,     flexed_max: 110, extended_min: 155, min_rom: 50, trunk_max: 45}
+    sentar_levantar: {joint: knee,     flexed_max: 115, extended_min: 150, min_rom: 40, trunk_max: 55, min_reps_30s: 12}
+    elevacao_braco:  {joint: shoulder, flexed_max: 40,  extended_min: 140, min_rom: 90}
+    flexao_cotovelo: {joint: elbow,    flexed_max: 70,  extended_min: 150, min_rom: 70}
+
+fusion:
+  correlation_window_hours: 6
+  weights: {vitals: 1.0, prescription: 0.6, movement: 0.6, audio: 0.7, video: 0.7}

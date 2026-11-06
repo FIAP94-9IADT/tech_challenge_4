@@ -1,0 +1,25 @@
+patient_id,timestamp,drug,dose,frequency_per_day,route,action,prescriber,expected_anomaly,unit
+P001,2026-10-28 08:30:00,dipirona,1000,4,IV,start,Dr. Alves,False,mg
+P001,2026-10-28 08:30:00,enoxaparina,40,1,SC,start,Dr. Alves,False,mg
+P001,2026-10-28 14:00:00,paracetamol,750,4,VO,start,Dr. Alves,False,mg
+P001,2026-10-28 20:00:00,dipirona,1000,3,IV,change,Dra. Reis,False,mg
+P002,2026-10-28 08:15:00,dipirona,1000,4,IV,start,Dr. Alves,False,mg
+P002,2026-10-28 10:00:00,enoxaparina,40,1,SC,start,Dr. Alves,False,mg
+P002,2026-10-28 18:30:00,vancomicina,1000,2,IV,start,Dra. Reis,False,mg
+P002,2026-10-28 19:00:00,heparina,5000,3,SC,start,Dr. Nunes,True,UI
+P002,2026-10-29 00:00:00,vancomicina,2000,2,IV,change,Dr. Nunes,True,mg
+P003,2026-10-28 08:00:00,morfina,2,6,IV,start,Dra. Costa,False,mg
+P003,2026-10-28 08:00:00,dipirona,1000,4,IV,start,Dra. Costa,False,mg
+P003,2026-10-28 12:00:00,ondansetrona,4,3,IV,start,Dra. Costa,False,mg
+P003,2026-10-28 21:00:00,morfina,10,6,IV,change,Dr. Nunes,True,mg
+P003,2026-10-28 21:30:00,midazolam,5,4,IV,start,Dr. Nunes,True,mg
+P004,2026-10-28 08:00:00,amiodarona,200,3,VO,start,Dr. Faria,False,mg
+P004,2026-10-28 08:00:00,enoxaparina,80,2,SC,start,Dr. Faria,False,mg
+P004,2026-10-28 13:00:00,cloreto de potassio,1000,3,VO,start,Dr. Faria,False,mg
+P004,2026-10-28 20:00:00,cloreto de potassio,2000,4,IV,change,Dr. Nunes,True,mg
+P004,2026-10-28 20:30:00,amiodarona,400,3,VO,change,Dr. Nunes,True,mg
+P005,2026-10-28 08:00:00,paracetamol,750,4,VO,start,Dra. Reis,False,mg
+P005,2026-10-28 08:00:00,insulina,10,3,SC,start,Dra. Reis,False,UI
+P005,2026-10-28 08:00:00,enoxaparina,40,1,SC,start,Dra. Reis,False,mg
+P005,2026-10-28 16:00:00,tramadol,50,4,VO,start,Dra. Reis,False,mg
+P005,2026-10-29 03:30:00,insulina,30,3,SC,change,Dr. Nunes,True,UI

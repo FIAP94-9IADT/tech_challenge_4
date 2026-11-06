@@ -1,0 +1,33 @@
+# Núcleo
+numpy>=1.26
+pandas>=2.1
+scipy>=1.11
+scikit-learn>=1.4
+pyyaml>=6.0
+python-dotenv>=1.0
+requests>=2.31
+matplotlib>=3.8
+
+# Vídeo (YOLOv8 / YOLOv8-pose / OpenPose via OpenCV DNN)
+ultralytics>=8.1
+opencv-python-headless>=4.9,<5  # OpenCV 5 removeu o importador Caffe (OpenPose)
+opencv-python>=4.9,<5
+# CPU: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+# Áudio
+librosa>=0.10
+soundfile>=0.12
+gTTS>=2.5            # apenas para gerar áudios de demonstração sem Azure
+
+# Azure Cognitive Services (AI Services)
+azure-cognitiveservices-speech>=1.37
+azure-ai-textanalytics>=5.3
+
+# Dados clínicos (PhysioNet)
+wfdb>=4.1
+
+# Interface desktop (Qt)
+PySide6>=6.6
+
+# Testes
+pytest>=8.0

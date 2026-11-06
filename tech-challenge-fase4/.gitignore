@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+*.pt
+*.caffemodel
+models/
+data/raw/
+data/physionet/
+outputs/*
+!outputs/.gitkeep
+.streamlit/secrets.toml
+.DS_Store

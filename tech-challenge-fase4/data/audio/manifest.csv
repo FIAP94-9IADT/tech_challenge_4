@@ -1,0 +1,5 @@
+file,patient_id,timestamp,expected_condition
+P001_consulta_normal.wav,P001,2026-10-28T10:30:00,normal
+P003_consulta_dispneia.wav,P003,2026-10-28T22:40:00,dispneia
+P004_consulta_disartria.wav,P004,2026-10-29T03:10:00,disartria
+P005_consulta_fadiga.wav,P005,2026-10-28T16:00:00,fadiga
