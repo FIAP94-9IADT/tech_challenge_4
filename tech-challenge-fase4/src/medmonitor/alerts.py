@@ -4,14 +4,19 @@ Canais suportados:
   * console (colorido por severidade)
   * arquivo JSONL (consumido pelo aplicativo desktop e auditável)
   * webhook (Microsoft Teams Workflows / Slack / endpoint genérico)
+  * Telegram (bot — mensagem formatada no celular da equipe)
 
 Inclui supressão de alertas repetidos (cooldown) para reduzir fadiga de alarmes.
 """
 
 from __future__ import annotations
 
+import html
 import json
 import logging
+import queue
+import threading
+import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
@@ -83,6 +88,9 @@ class AlertManager:
         if self.log_path:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
         self.extra_sinks = list(extra_sinks)
+        tg = acfg.get("telegram", {})
+        self.telegram = TelegramNotifier(tg["token"], tg["chat_id"], tg.get("min_severity", "CRITICAL")) \
+            if tg.get("token") and tg.get("chat_id") else None
         self._last_sent: dict[tuple, datetime] = {}
         self.history: list[Alert] = []
         self.suppressed = 0
@@ -109,6 +117,8 @@ class AlertManager:
                 f.write(json.dumps(alert.to_dict(), ensure_ascii=False, default=str) + "\n")
         if self.webhook_url and alert.severity >= self.min_webhook:
             self._send_webhook(alert)
+        if self.telegram and alert.severity >= self.telegram.min_severity:
+            self.telegram.send(alert)
         for sink in self.extra_sinks:
             sink(alert)
         return True
@@ -148,6 +158,85 @@ class AlertManager:
             }
             return {"type": "message", "attachments": [{"contentType": "application/vnd.microsoft.card.adaptive", "content": card}]}
         return alert.to_dict()
+
+
+class TelegramNotifier:
+    """Envia alertas por um bot do Telegram (API sendMessage, HTML).
+
+    Os envios passam por uma fila atendida em segundo plano: quem gera o alerta (pipeline,
+    monitor em tempo real, interface) não espera a rede. A fila respeita o limite da
+    plataforma (~1 msg/s por conversa; ~20 msg/min em grupos) e é esvaziada antes de o
+    programa terminar. Falhas de rede são registradas e não interrompem o sistema.
+    """
+
+    API = "https://api.telegram.org/bot{token}/{method}"
+    ICON = {Severity.INFO: "🔵", Severity.WARNING: "🟠", Severity.CRITICAL: "🔴"}
+    MODALITY = {"vitals": "Sinais vitais", "prescription": "Prescrição", "movement": "Movimentação",
+                "audio": "Áudio", "video": "Vídeo", "fusion": "Fusão multimodal"}
+
+    def __init__(self, token: str, chat_id: str, min_severity: "str | Severity" = "CRITICAL"):
+        self.token, self.chat_id = token, str(chat_id)
+        self.min_severity = Severity.parse(min_severity)
+        self.interval = 3.1 if self.chat_id.startswith("-") else 1.1  # grupo x conversa privada
+        self._last = 0.0
+        self.sent = 0
+        self._queue: queue.Queue[Alert] = queue.Queue()
+        self._worker: threading.Thread | None = None
+        self._lock = threading.Lock()
+
+    @classmethod
+    def format(cls, alert: Alert) -> str:
+        e = html.escape
+        ts = alert.timestamp.replace("T", " ")[:16]
+        lines = [f"{cls.ICON[alert.severity]} <b>{SEVERITY_LABEL_PT[alert.severity]} — {e(alert.title)}</b>",
+                 f"Paciente <b>{e(alert.patient_id)}</b> · {cls.MODALITY.get(alert.modality, alert.modality)} · {ts}",
+                 "", e(alert.description)]
+        if alert.evidence:
+            lines += ["", "<i>Evidências:</i>"] + [f"• {e(str(k))}: {e(str(v))}" for k, v in list(alert.evidence.items())[:6]]
+        if alert.recommended_action:
+            lines += ["", f"👉 <b>Conduta sugerida:</b> {e(alert.recommended_action)}"]
+        return "\n".join(lines)[:4000]  # limite da API: 4096 caracteres
+
+    def call(self, method: str, **payload) -> dict:
+        resp = requests.post(self.API.format(token=self.token, method=method), json=payload, timeout=15)
+        data = resp.json()
+        if not data.get("ok"):
+            raise RuntimeError(f"Telegram: {data.get('description', resp.status_code)}")
+        return data["result"]
+
+    def send_text(self, text: str) -> None:
+        wait = self.interval - (time.monotonic() - self._last)
+        if wait > 0:
+            time.sleep(wait)
+        self.call("sendMessage", chat_id=self.chat_id, text=text, parse_mode="HTML", disable_web_page_preview=True)
+        self._last = time.monotonic()
+        self.sent += 1
+
+    def send(self, alert: Alert) -> None:
+        """Enfileira o alerta; retorna imediatamente."""
+        self._queue.put(alert)
+        with self._lock:
+            if self._worker is None or not self._worker.is_alive():
+                # thread não-daemon: o processo só termina depois de entregar a fila
+                self._worker = threading.Thread(target=self._drain, name="telegram", daemon=False)
+                self._worker.start()
+
+    def _drain(self) -> None:
+        while True:
+            try:
+                alert = self._queue.get(timeout=5)
+            except queue.Empty:
+                return
+            try:
+                self.send_text(self.format(alert))
+            except (requests.RequestException, RuntimeError, ValueError) as exc:
+                # mensagens do requests incluem a URL; o token não pode ir para o log
+                log.warning("Falha ao enviar o alerta %s ao Telegram: %s", alert.id, str(exc).replace(self.token, "<token>"))
+
+    def flush(self, timeout: float = 120) -> None:
+        """Aguarda a entrega dos alertas pendentes."""
+        if self._worker:
+            self._worker.join(timeout)
 
 
 def load_alerts(path: str | Path) -> list[Alert]:

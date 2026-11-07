@@ -9,7 +9,7 @@ Sistema que monitora pacientes continuamente a partir de **vídeo, áudio, texto
 | Análise de vídeo com **OpenPose** e **YOLOv8** | [`src/medmonitor/video/`](src/medmonitor/video/) — YOLOv8-pose (padrão) e OpenPose (OpenCV DNN), YOLOv8 para objetos e áreas críticas, relatório automático por vídeo |
 | Áudio com **Azure Speech to Text** e **Azure Text Analytics** | [`src/medmonitor/audio/`](src/medmonitor/audio/) — transcrição contínua com timestamps por palavra, sentimento com mineração de opinião, frases-chave, Text Analytics for Health e biomarcadores vocais (fadiga, dispneia, disartria) |
 | Anomalias em **sinais vitais, prescrições e movimentação** | [`src/medmonitor/anomaly/`](src/medmonitor/anomaly/) — NEWS2 + z-score robusto + Isolation Forest, monitor em tempo real; regras farmacológicas + Isolation Forest; imobilidade, agitação noturna e queda |
-| Fusão multimodal e alertas | [`fusion.py`](src/medmonitor/fusion.py), [`alerts.py`](src/medmonitor/alerts.py) — 7 regras de correlação entre modalidades, escore de risco, cooldown, webhook (Teams/Slack) |
+| Fusão multimodal e alertas | [`fusion.py`](src/medmonitor/fusion.py), [`alerts.py`](src/medmonitor/alerts.py) — 7 regras de correlação entre modalidades, escore de risco, cooldown, Telegram, webhook (Teams/Slack) |
 | Interface da equipe médica | [`gui/`](src/medmonitor/gui/) — aplicativo desktop nativo (Qt/PySide6), sem navegador |
 | Relatório técnico | [`docs/RELATORIO_TECNICO.md`](docs/RELATORIO_TECNICO.md) |
 | Notebook (Google Colab / VS Code) | [`colab/MedMonitor_Colab.ipynb`](colab/MedMonitor_Colab.ipynb) — execução passo a passo de todas as modalidades ([instruções](colab/README.md)) |
@@ -33,6 +33,7 @@ flowchart LR
   F --> AM[AlertManager<br/>cooldown · severidade]
   AM --> D[Aplicativo desktop Qt]
   AM --> W[Teams / Slack webhook]
+  AM --> T[Telegram bot]
   AM --> L[Log JSONL auditável]
   classDef m fill:#eef4fc,stroke:#2a78d6
 ```
@@ -63,6 +64,16 @@ python main.py demo
 
 Ou copie `.env.example` para `.env` e preencha `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION`, `AZURE_LANGUAGE_KEY`, `AZURE_LANGUAGE_ENDPOINT`. Para receber os alertas no Microsoft Teams, defina `ALERT_WEBHOOK_URL` com a URL de um fluxo *Workflows* ("Post to a channel when a webhook request is received") — os alertas chegam como Adaptive Cards.
 
+### Alertas no Telegram
+
+1. No Telegram, fale com **@BotFather** → `/newbot` → copie o token para `TELEGRAM_BOT_TOKEN` no `.env`.
+2. Envie qualquer mensagem ao seu bot (ou adicione-o a um grupo da equipe) e rode `python main.py telegram-chatid`; copie o número para `TELEGRAM_CHAT_ID`.
+3. `python main.py telegram-test` envia um alerta de exemplo.
+
+Por padrão só alertas **CRÍTICOS** vão ao celular (`alerts.telegram.min_severity` no `config.yaml`). Os envios ocorrem em segundo plano e respeitam o limite de mensagens do Telegram; vale para o `demo`, o `stream` e o monitor em tempo real do aplicativo.
+
+> Para a demonstração usamos o Telegram. Com dados reais de pacientes, use um canal institucional (ex.: Teams do hospital), por causa da LGPD — é só configuração.
+
 ## Comandos
 
 | Comando | O que faz |
@@ -76,6 +87,7 @@ Ou copie `.env.example` para `.env` e preencha `AZURE_SPEECH_KEY`, `AZURE_SPEECH
 | `python main.py video <arquivo> --zones` | Ativa o monitoramento das áreas críticas definidas no `config.yaml` |
 | `python main.py physionet --record 14` | Detecção em sinais vitais **reais** (PhysioNet BIDMC) |
 | `python main.py azure-check` | Valida as credenciais Azure |
+| `python main.py telegram-chatid` / `telegram-test` | Descobre o chat_id e envia um alerta de teste ao Telegram |
 | `pytest` | 28 testes automatizados |
 
 Perfis de exercício disponíveis: `agachamento`, `sentar_levantar`, `elevacao_braco`, `flexao_cotovelo` (configuráveis no `config.yaml`).

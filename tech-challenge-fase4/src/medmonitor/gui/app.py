@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QFileDialog, 
 from ..alerts import Alert, AlertManager, Severity, load_alerts
 from ..anomaly.movement import detect_movement_anomalies
 from ..anomaly.vitals import VITAL_NAMES, VITAL_UNITS, StreamingVitalsMonitor, detect_vitals_anomalies, news2_score
-from ..config import azure_language_enabled, azure_speech_enabled, load_config, resolve
+from ..config import azure_language_enabled, azure_speech_enabled, load_config, resolve, telegram_enabled
 from ..data.synthetic import load_csv
 from .widgets import (DETECTED, MUTED, SERIES, SEV_COLOR, SEV_PT, STYLE, Canvas, KpiCard, Task, VideoPlayer,
                       color_cell, fill_table, make_table, scaled_pixmap, shade)
@@ -702,7 +702,8 @@ class MainWindow(QMainWindow):
         for a in (self.run_act, reload_act, report_act):
             tb.addAction(a)
         az = (f"Azure Speech: {'ativo' if azure_speech_enabled(self.st.cfg) else 'fallback local'}  ·  "
-              f"Azure Language: {'ativo' if azure_language_enabled(self.st.cfg) else 'fallback local'}")
+              f"Azure Language: {'ativo' if azure_language_enabled(self.st.cfg) else 'fallback local'}  ·  "
+              f"Telegram: {'ativo' if telegram_enabled(self.st.cfg) else 'desligado'}")
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         tb.addWidget(spacer)

@@ -7,6 +7,7 @@ Exemplos:
   python main.py video data/video/P001_agachamento.mp4 --profile agachamento --patient P001
   python main.py physionet --record 5         # dados reais (PhysioNet BIDMC)
   python main.py azure-check                  # valida as credenciais do Azure
+  python main.py telegram-test                # envia um alerta de teste ao Telegram
   python main.py prepare                      # gera/baixa todos os dados de demonstração
   python main.py gui                          # aplicativo desktop da equipe médica
 """
@@ -37,8 +38,10 @@ def cmd_prepare(cfg, args):
 
 def cmd_demo(cfg, args):
     from medmonitor.pipeline import run_pipeline
+    from medmonitor.config import telegram_enabled
     print(f"Azure Speech: {'ATIVO' if azure_speech_enabled(cfg) else 'fallback local'} | "
-          f"Azure Language: {'ATIVO' if azure_language_enabled(cfg) else 'fallback local'}\n")
+          f"Azure Language: {'ATIVO' if azure_language_enabled(cfg) else 'fallback local'} | "
+          f"Telegram: {'ATIVO (' + cfg['alerts']['telegram']['min_severity'] + ')' if telegram_enabled(cfg) else 'desligado'}\n")
     t = time.time()
     res = run_pipeline(cfg, with_audio=not args.no_audio, with_video=not args.no_video,
                        reuse_video=not args.reprocess_video, regenerate=args.regenerate, quiet=args.quiet)
@@ -125,6 +128,46 @@ def cmd_physionet(cfg, args):
     print("Figura:", plot_vitals(r, out / f"physionet_{r.patient_id}.png"))
 
 
+def cmd_telegram_chatid(cfg, args):
+    """Lista as conversas que escreveram ao bot, para descobrir o TELEGRAM_CHAT_ID."""
+    from medmonitor.alerts import TelegramNotifier
+    token = cfg["alerts"]["telegram"]["token"]
+    if not token:
+        print("✗ Preencha TELEGRAM_BOT_TOKEN no .env (token do @BotFather).")
+        return
+    me = TelegramNotifier(token, "0").call("getMe")
+    updates = TelegramNotifier(token, "0").call("getUpdates")
+    chats = {}
+    for u in updates:
+        msg = u.get("message") or u.get("channel_post") or u.get("my_chat_member") or {}
+        chat = msg.get("chat")
+        if chat:
+            chats[chat["id"]] = chat.get("title") or " ".join(filter(None, [chat.get("first_name"), chat.get("last_name")]))
+    print(f"Bot: @{me['username']}")
+    if not chats:
+        print(f"Nenhuma conversa encontrada. Envie uma mensagem para @{me['username']} (ou adicione-o a um grupo) e rode de novo.")
+    for cid, name in chats.items():
+        print(f"  TELEGRAM_CHAT_ID={cid}    ({name})")
+
+
+def cmd_telegram_test(cfg, args):
+    """Envia um alerta de exemplo para o Telegram configurado no .env."""
+    from datetime import datetime
+    from medmonitor.alerts import Alert, Severity, TelegramNotifier
+    from medmonitor.config import telegram_enabled
+    if not telegram_enabled(cfg):
+        print("✗ Preencha TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID no .env.")
+        return
+    tg = cfg["alerts"]["telegram"]
+    alert = Alert("P003", "fusion", Severity.CRITICAL, "Suspeita de depressão respiratória induzida por opioide/sedativo",
+                  "Teste do MedMonitor: morfina alterada às 21:00; bradipneia e dessaturação às 22:17.",
+                  datetime.now().replace(microsecond=0).isoformat(),
+                  evidence={"prescription@21:00": "Morfina 12 → 60 mg/dia (5x)", "vitals@22:17": "SpO2 87%, FR 4 irpm"},
+                  recommended_action="Suspender/reduzir opioide e sedativo, considerar naloxona.")
+    TelegramNotifier(tg["token"], tg["chat_id"]).send_text(TelegramNotifier.format(alert))
+    print(f"✓ Alerta de teste enviado ao chat {tg['chat_id']}.")
+
+
 def cmd_gui(cfg, args):
     from medmonitor.gui.app import main as gui_main
     sys.exit(gui_main())
@@ -194,6 +237,8 @@ def main():
 
     sub.add_parser("azure-check", help="testa as credenciais Azure (Speech + Language)")
     sub.add_parser("gui", help="abre o aplicativo desktop da equipe médica")
+    sub.add_parser("telegram-chatid", help="mostra o chat_id das conversas com o bot do Telegram")
+    sub.add_parser("telegram-test", help="envia um alerta de teste ao Telegram")
 
     p = sub.add_parser("physionet", help="detecção em sinais vitais reais do PhysioNet (BIDMC)")
     p.add_argument("--record", type=int, default=1)
@@ -202,7 +247,8 @@ def main():
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     cfg = load_config(args.config)
     {"prepare": cmd_prepare, "demo": cmd_demo, "stream": cmd_stream, "audio": cmd_audio, "video": cmd_video,
-     "physionet": cmd_physionet, "azure-check": cmd_azure_check, "gui": cmd_gui}[args.cmd](cfg, args)
+     "physionet": cmd_physionet, "azure-check": cmd_azure_check, "gui": cmd_gui,
+     "telegram-chatid": cmd_telegram_chatid, "telegram-test": cmd_telegram_test}[args.cmd](cfg, args)
 
 
 if __name__ == "__main__":

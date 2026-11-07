@@ -26,7 +26,15 @@ def load_config(path: str | None = None) -> dict:
     }
     cfg["alerts"]["webhook_url"] = os.getenv("ALERT_WEBHOOK_URL", "").strip()
     cfg["alerts"]["webhook_format"] = os.getenv("ALERT_WEBHOOK_FORMAT", "teams").strip()
+    cfg["alerts"].setdefault("telegram", {})
+    cfg["alerts"]["telegram"].update(token=os.getenv("TELEGRAM_BOT_TOKEN", "").strip(),
+                                     chat_id=os.getenv("TELEGRAM_CHAT_ID", "").strip())
     return cfg
+
+
+def telegram_enabled(cfg: dict) -> bool:
+    tg = cfg["alerts"].get("telegram", {})
+    return bool(tg.get("token") and tg.get("chat_id"))
 
 
 def resolve(path: str | Path) -> Path:

@@ -61,3 +61,26 @@ def test_local_sentiment():
     assert _local_sentiment("Estou me sentindo bem melhor hoje.")["label"] == "positive"
     assert _local_sentiment("Estou com muita dor e falta de ar.")["label"] == "negative"
     assert _local_sentiment("Não estou bem.")["label"] == "negative"
+
+
+def test_telegram_message_and_routing(cfg, monkeypatch):
+    import medmonitor.alerts as al
+
+    sent = []
+
+    class FakeResp:
+        def json(self):
+            return {"ok": True, "result": {}}
+
+    monkeypatch.setattr(al.requests, "post", lambda url, json, timeout: sent.append((url, json)) or FakeResp())
+    monkeypatch.setattr(al.time, "sleep", lambda s: None)
+    c = {**cfg, "alerts": {**cfg["alerts"], "console": False, "webhook_url": "",
+                           "telegram": {"token": "123:ABC", "chat_id": "42", "min_severity": "CRITICAL"}}}
+    mgr = AlertManager(c)
+    mgr.dispatch(_a("vitals", "Taquicardia <FC>", "2026-01-01T10:00:00", Severity.WARNING))   # abaixo do mínimo
+    mgr.dispatch(_a("fusion", "AVC & arritmia", "2026-01-01T11:00:00", Severity.CRITICAL, x="<b>"))
+    mgr.telegram.flush(5)
+    assert len(sent) == 1
+    url, body = sent[0]
+    assert url.endswith("/bot123:ABC/sendMessage") and body["chat_id"] == "42" and body["parse_mode"] == "HTML"
+    assert "<b>CRÍTICO — AVC &amp; arritmia</b>" in body["text"] and "&lt;b&gt;" in body["text"]  # HTML escapado

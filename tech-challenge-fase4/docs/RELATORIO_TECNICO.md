@@ -58,6 +58,7 @@ flowchart TB
   F --> AM[AlertManager<br/>severidade · cooldown · evidências]
   AM --> C1[Aplicativo desktop Qt]
   AM --> C2[Microsoft Teams<br/>Adaptive Card via webhook]
+  AM --> C4[Telegram<br/>bot no celular da equipe]
   AM --> C3[Log JSONL auditável]
 ```
 
@@ -201,7 +202,7 @@ onde $s_m \in [0,1]$ é o escore de cada modalidade e $w_m$ seu peso (vitais 1,0
 | R6 | Desempenho motor ruim + imobilidade/fadiga → risco de queda | vídeo + movimento/áudio | — | ATENÇÃO |
 | R7 | Medicamento de alta vigilância alterado até 2 h após evento crítico | qualquer → prescrição | 2 h | ATENÇÃO |
 
-**Alertas** ([`alerts.py`](../src/medmonitor/alerts.py)): três níveis (INFORMATIVO, ATENÇÃO, CRÍTICO), sempre com **evidências** e **conduta sugerida**. O cooldown evita a fadiga de alarmes, problema reconhecido em UTIs. Os canais são console, log JSONL (auditoria) e webhook — no Microsoft Teams o alerta chega como Adaptive Card com cor por severidade e as evidências em tabela.
+**Alertas** ([`alerts.py`](../src/medmonitor/alerts.py)): três níveis (INFORMATIVO, ATENÇÃO, CRÍTICO), sempre com **evidências** e **conduta sugerida**. O cooldown evita a fadiga de alarmes, problema reconhecido em UTIs. Os canais são console, log JSONL (auditoria), webhook — no Microsoft Teams o alerta chega como Adaptive Card com cor por severidade e as evidências em tabela — e **Telegram**: um bot envia ao celular da equipe (ou a um grupo do plantão) os alertas críticos, com ícone de severidade, paciente, evidências e conduta sugerida. Os envios ao Telegram passam por uma fila em segundo plano que respeita o limite de mensagens da plataforma, para não atrasar a detecção. Em produção, com dados reais, o canal institucional (Teams) é o indicado pela LGPD; a troca é apenas de configuração.
 
 **Interface da equipe — aplicativo desktop** ([`gui/`](../src/medmonitor/gui/), Qt/PySide6). Sem navegador nem servidor: abas de central de alertas, sinais vitais (histórico e monitor em tempo real), prescrições, movimentação, áudio, vídeo e métricas. No monitor em tempo real, cada alerta crítico gera uma faixa vermelha na janela, um aviso sonoro e uma notificação do sistema operacional. Análises de novos áudios e vídeos rodam em segundo plano (`QThreadPool`).
 

@@ -20,7 +20,7 @@ def _pump(ms):
     loop.exec()
 
 
-def test_main_window_tabs_and_live_monitor():
+def test_main_window_tabs_and_live_monitor(cfg):  # cfg desliga Telegram/webhook
     from PySide6.QtWidgets import QApplication
 
     from medmonitor.gui.app import MainWindow

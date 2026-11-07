@@ -9,6 +9,8 @@ alerts:
   cooldown_minutes: 30          # suprime alertas repetidos (mesmo paciente/modalidade/título)
   console: true
   min_severity_webhook: WARNING # INFO | WARNING | CRITICAL
+  telegram:
+    min_severity: CRITICAL      # só alertas críticos vão ao celular (evita excesso de mensagens)
 
 vitals:
   sampling_minutes: 1

@@ -12,4 +12,5 @@ from medmonitor.config import load_config  # noqa: E402
 def cfg():
     c = load_config()
     c["alerts"]["webhook_url"] = ""  # testes nunca disparam webhook real
+    c["alerts"]["telegram"].update(token="", chat_id="")  # nem mensagens no Telegram
     return c
