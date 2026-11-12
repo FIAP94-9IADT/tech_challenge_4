@@ -1,0 +1,5 @@
+file,patient_id,profile,target,timestamp,description,source,zones
+P005_sentar_levantar.mp4,P005,sentar_levantar,left,2026-10-28T15:00:00,Teste de sentar e levantar 30 s,CDC STEADI — domínio público,False
+P001_agachamento.mp4,P001,agachamento,largest,2026-10-28T11:00:00,Sessão de fisioterapia — agachamento,Taco fleur — CC BY-SA 4.0 (Wikimedia Commons),False
+P005_queda_simulada.mp4,P005,,largest,2026-10-29T02:59:00,Queda simulada (rotação sintética),Derivado de Taco fleur — CC BY-SA 4.0,False
+zona_critica.mp4,SALA-01,,largest,2026-10-28T09:00:00,Circulação em área crítica,Ultralytics assets — AGPL-3.0,True

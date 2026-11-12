@@ -1,0 +1,6 @@
+patient_id,nome,idade,leito,cenario
+P001,Ana Souza,54,UTI-01,Controle estável
+P002,Bruno Lima,71,UTI-02,Sepse de foco pulmonar
+P003,Carla Mendes,63,ENF-12,Pós-operatório abdominal em analgesia com opioide
+P004,Diego Rocha,68,UCO-03,Fibrilação atrial paroxística
+P005,Elisa Prado,79,ENF-07,Pós-operatório de artroplastia de quadril
